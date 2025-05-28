@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Resume Analyzer</title>
+</head>
+<body>
+  <h1>Upload Resume</h1>
+  <form id="resumeForm">
+    <input type="file" id="resume" name="resume" accept=".pdf" required />
+    <br><br>
+    <textarea id="jobdesc" rows="6" cols="60" placeholder="Paste job description here (optional)"></textarea>
+    <br><br>
+    <button type="submit">Analyze</button>
+  </form>
+  <pre id="result"></pre>
+
+  <script>
+    const form = document.getElementById('resumeForm');
+    const result = document.getElementById('result');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const file = document.getElementById('resume').files[0];
+      const jd = document.getElementById('jobdesc').value;
+
+      const formData = new FormData();
+      formData.append('resume', file);
+      formData.append('jobdesc', jd);
+
+      const res = await fetch('http://localhost:5000/analyze', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      result.textContent = JSON.stringify(data, null, 2);
+    });
+  </script>
+</body>
+</html>

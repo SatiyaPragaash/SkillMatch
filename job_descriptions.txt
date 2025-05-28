@@ -1,0 +1,5 @@
+Software Engineer with experience in Python, AWS, and microservices.
+DevOps Engineer with CI/CD pipeline, Docker, Kubernetes, and Terraform.
+Frontend Developer skilled in React, TypeScript, and UX design principles.
+Data Analyst with skills in SQL, Tableau, and data storytelling.
+Machine Learning Engineer with PyTorch, SageMaker, and cloud deployment.
