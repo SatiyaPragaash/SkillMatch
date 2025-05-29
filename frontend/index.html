@@ -1,33 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Resume Analyzer</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans p-6">
-  <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8">
-    <h2 class="text-2xl font-bold mb-6 text-center text-blue-700">Resume Analyzer</h2>
+<body class="min-h-screen bg-gradient-to-br from-blue-100 via-indigo-200 to-purple-300 text-gray-800 font-sans flex items-center justify-center px-4 py-10">
+  <div class="max-w-2xl w-full bg-white bg-opacity-90 backdrop-blur-md rounded-2xl shadow-xl p-8">
+    <h2 class="text-3xl font-bold mb-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+      Resume Analyzer
+    </h2>
 
-    <form id="resumeForm" class="space-y-4">
+    <form id="resumeForm" class="space-y-6">
       <div>
-        <label class="block font-semibold mb-1">Upload Resume (PDF):</label>
-        <input type="file" name="resume" accept=".pdf" required class="w-full border rounded px-3 py-2">
+        <label class="block font-semibold mb-1 text-gray-700">Upload Resume (PDF):</label>
+        <input type="file" name="resume" accept=".pdf" required
+               class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400">
       </div>
 
       <div>
-        <label class="block font-semibold mb-1">Paste Job Description (optional):</label>
-        <textarea name="jobdesc" rows="5" class="w-full border rounded px-3 py-2" placeholder="Enter job description here..."></textarea>
+        <label class="block font-semibold mb-1 text-gray-700">Paste Job Description (optional):</label>
+        <textarea name="jobdesc" rows="5"
+                  class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  placeholder="Enter job description here..."></textarea>
       </div>
 
-      <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded hover:bg-blue-700">
+      <button type="submit"
+              class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold py-2 px-4 rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all">
         Analyze
       </button>
     </form>
 
     <div class="mt-8">
-      <h3 class="text-lg font-bold mb-2 text-green-700">Results:</h3>
-      <div id="output" class="bg-gray-50 border rounded p-4 whitespace-pre-line text-sm text-gray-700"></div>
+      <h3 class="text-xl font-semibold mb-3 text-purple-700">Results</h3>
+      <div id="output"
+           class="bg-white border border-gray-300 rounded-lg p-4 whitespace-pre-line text-sm text-gray-700 shadow-inner min-h-[80px]">
+      </div>
     </div>
   </div>
 
@@ -39,6 +47,8 @@
       e.preventDefault();
       const formData = new FormData(form);
 
+      output.innerHTML = "Analyzing...";
+
       try {
         const response = await fetch('http://127.0.0.1:5000/analyze', {
           method: 'POST',
@@ -46,15 +56,15 @@
         });
 
         const result = await response.json();
-        console.log("✅ JSON received:", result);
+        console.log("JSON received:", result);
 
         output.innerHTML = `
   <strong>Job Description Used:</strong><br>${result.job_description_used}<br><br>
   <strong>SkillMatch Score:</strong> ${result.keyword_match_percent}%<br><br>
-  <strong>Missing Keywords:</strong><br>${result.missing_keywords.join(", ") || "None, it's a great match!"}
+  <strong>Missing Keywords:</strong><br>${result.missing_keywords.join(", ") || "None — it's a great match!"}
         `;
       } catch (err) {
-        output.textContent = "Error analyzing resume. Please check the backend console.";
+        output.textContent = " Error analyzing resume. Please check the backend console.";
         console.error("JSON parsing failed:", err);
       }
     });
