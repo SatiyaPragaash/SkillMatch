@@ -16,7 +16,7 @@ technical_keywords = {
     'react', 'reactjs', 'redux', 'jest', 'thunk', 'mssql', 'mysql', 'mongodb', 'nosql',
     'rest', 'restful', 'api', 'apis', 'aws', 'gcp', 'azure', 'heroku', 'docker', 'kubernetes',
     'git', 'github', 'gitlab', 'oop', 'object', 'oriented', 'functional', 'programming',
-    'testing', 'state', 'command', 'line', 'ci', 'cd', 'pipeline', 'pipelines', 'devops',
+    'testing', 'ci', 'cd', 'pipeline', 'pipelines', 'devops',
     'containerization', 'microservices', 'flask', 'django', 'streamlit', 'panel', 'python',
     'sql', 'typescript', 'cloud', 'linux', 'bash', 'power bi', 'c++', 'c#', 'java', 'spring',
     'springboot', 'graphql', 'postgre', 'postgresql', 'vue', 'vuejs', 'angular', 'tailwind',
@@ -32,14 +32,26 @@ technical_keywords = {
     'abtesting', 'wcag', 'accessibility', 'typography', 'persona', 'zerotrust', 'soc2', 'iam',
     'firewall', 'vpn', 'splunk', 'snort', 'wireshark', 'nmap', 'owasp', 'guardduty',
     'cloudtrail', 'waf', 'kms', 'hashicorp', 'vault', 'incident', 'response', 'penetration',
-    'vulnerability', 'compliance', 'gdpr', 'iso27001'
+    'vulnerability', 'compliance', 'gdpr', 'iso27001', 'net', 'sdlc', 'redis', 'c#', 'csharp'
 }
 
-def clean_and_tokenize(text):
-    words = re.findall(r'\b\w+\b', text.lower())
-    return set(w for w in words if w in technical_keywords)
+# ✅ Mapping for frontend-friendly display
+display_map = {
+    'net': '.NET',
+    'c#': 'C#',
+    'c++': 'C++',
+}
 
-# Load models and data
+# ✅ Tokenizer with normalization
+def clean_and_tokenize(text):
+    text = text.replace('C#', 'c#').replace('C++', 'c++').replace('.NET', 'net')
+    words = re.findall(r'\b[\w#+.]+\b', text.lower())
+    normalized_words = set(w.strip(".").strip(",") for w in words)
+    print("🔍 Extracted words from input text:", normalized_words)
+    print("🧠 Matched technical keywords:", normalized_words & technical_keywords)
+    return set(w for w in normalized_words if w in technical_keywords)
+
+# ✅ Load models and data
 model = SentenceTransformer('all-MiniLM-L6-v2')
 index = faiss.read_index('faiss_job_index.index')
 job_embeddings = np.load('job_embeddings.npy')
@@ -87,11 +99,14 @@ def analyze_resume():
     missing = jd_keywords - resume_keywords
     keyword_match_percentage = (len(common) / len(jd_keywords)) * 100 if jd_keywords else 0
 
+    # 🔁 Display-friendly keywords
+    display_missing = [display_map.get(w, w) for w in missing]
+
     return jsonify({
         "job_description_used": matched_description,
         "similarity_score": float(round(similarity_score, 2)),
         "keyword_match_percent": float(round(keyword_match_percentage, 2)),
-        "missing_keywords": list(missing)
+        "missing_keywords": display_missing
     })
 
 if __name__ == '__main__':

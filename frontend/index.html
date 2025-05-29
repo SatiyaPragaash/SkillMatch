@@ -17,10 +17,10 @@
 }
 </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white font-sans overflow-x-hidden">
+<body class="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white font-sans overflow-x-hidden">
 
 <!-- Header -->
-<header class="fixed top-0 left-0 right-0 z-50 bg-white/5 backdrop-blur-xl border-b border-white/10">
+<header class="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-xl border-b border-white/10">
   <div class="max-w-7xl mx-auto px-6 py-4">
     <div class="flex items-center justify-between">
       <!-- Logo -->
@@ -53,9 +53,9 @@
 
 <!-- Background Animation -->
 <div class="fixed inset-0 overflow-hidden pointer-events-none">
-<div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/20 rounded-full blur-xl animate-pulse"></div>
-<div class="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500/20 rounded-full blur-xl animate-pulse delay-2s"></div>
-<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-pink-500/10 rounded-full blur-xl animate-pulse delay-4s"></div>
+<div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/10 rounded-full blur-xl animate-pulse"></div>
+<div class="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500/10 rounded-full blur-xl animate-pulse delay-2s"></div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-pink-500/5 rounded-full blur-xl animate-pulse delay-4s"></div>
 </div>
 
 <div class="relative z-10 min-h-screen pt-20">
@@ -63,9 +63,9 @@
 
 <!-- Form Section -->
 <div id="formSection" class="w-full max-w-4xl px-8 py-12 transition-all duration-700">
-<div id="formCard" class="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 p-12 hover:scale-[1.02] transition-all duration-300">
+<div id="formCard" class="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/20 p-12 hover:scale-[1.02] transition-all duration-300 shadow-2xl">
 <div id="header" class="text-center mb-8">
-<div id="icon" class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl mb-4">
+<div id="icon" class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl mb-4 shadow-lg">
 <svg id="iconSvg" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
 </svg>
@@ -105,9 +105,9 @@
 
 <!-- Results Section -->
 <div id="resultsSection" class="flex-1 p-6 overflow-y-auto transform translate-x-full opacity-0 transition-all duration-700" style="display: none;">
-<div id="resultsCard" class="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 p-8 max-w-4xl mx-auto">
+<div id="resultsCard" class="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/20 p-8 max-w-4xl mx-auto shadow-2xl">
 <div class="flex items-center mb-6">
-<div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mr-4">
+<div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mr-4 shadow-lg">
 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
 </svg>
@@ -122,8 +122,8 @@
 </div>
 
 <!-- Loading Overlay -->
-<div id="loadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" style="display: none;">
-<div class="bg-white/10 backdrop-blur-xl rounded-2xl p-8 text-center border border-white/20">
+<div id="loadingOverlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" style="display: none;">
+<div class="bg-white/5 backdrop-blur-xl rounded-2xl p-8 text-center border border-white/20 shadow-2xl">
 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-400 mx-auto mb-4"></div>
 <p class="text-white text-lg font-medium">Analyzing your resume...</p>
 <p class="text-gray-300 text-sm mt-2">This may take a few moments</p>
@@ -157,12 +157,12 @@ function shrinkForm() {
   const { formSection, formCard, header, icon, iconSvg, title, subtitle, fileLabel, jobLabel, fileInput, jobTextarea, submitBtn, btnIcon } = elements;
   
   // Container changes
-  formSection.className = 'w-96 flex-shrink-0 p-6 bg-black/20 backdrop-blur-sm border-r border-white/10 transition-all duration-700';
-  formCard.className = 'bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 p-6 mb-6 hover:scale-[1.02] transition-all duration-300';
+  formSection.className = 'w-96 flex-shrink-0 p-6 bg-black/30 backdrop-blur-sm border-r border-white/10 transition-all duration-700';
+  formCard.className = 'bg-white/5 backdrop-blur-xl rounded-3xl border border-white/20 p-6 mb-6 hover:scale-[1.02] transition-all duration-300 shadow-lg';
   
   // Header changes
   header.className = 'text-center mb-6';
-  icon.className = 'inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl mb-3';
+  icon.className = 'inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl mb-3 shadow-lg';
   iconSvg.className = 'w-6 h-6';
   title.className = 'text-2xl font-bold mb-2 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent';
   subtitle.className = 'text-gray-300 text-sm';
@@ -213,7 +213,7 @@ elements.form.addEventListener('submit', async (e) => {
 
     elements.output.innerHTML = `
       <div class="grid gap-4">
-        <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+        <div class="bg-white/5 rounded-xl p-4 border border-white/10 shadow-lg">
           <h4 class="font-semibold text-indigo-300 mb-2 flex items-center">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -221,20 +221,20 @@ elements.form.addEventListener('submit', async (e) => {
           </h4>
           <p class="text-gray-300 text-sm leading-relaxed">${result.job_description_used}</p>
         </div>
-        <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+        <div class="bg-white/5 rounded-xl p-4 border border-white/10 shadow-lg">
           <h4 class="font-semibold text-purple-300 mb-3 flex items-center">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
             </svg>SkillMatch Score
           </h4>
           <div class="flex items-center space-x-4">
-            <div class="flex-1 bg-gray-700 rounded-full h-3 overflow-hidden">
+            <div class="flex-1 bg-gray-800 rounded-full h-3 overflow-hidden">
               <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all duration-1000" style="width: ${score}%"></div>
             </div>
             <span class="text-2xl font-bold ${scoreColor}">${score}%</span>
           </div>
         </div>
-        <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+        <div class="bg-white/5 rounded-xl p-4 border border-white/10 shadow-lg">
           <h4 class="font-semibold text-orange-300 mb-2 flex items-center">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"/>
@@ -255,7 +255,7 @@ elements.form.addEventListener('submit', async (e) => {
     setTimeout(() => elements.resultsSection.className = 'flex-1 p-6 overflow-y-auto transform translate-x-0 opacity-100 transition-all duration-700', 100);
 
     elements.output.innerHTML = `
-      <div class="bg-red-500/20 border border-red-500/30 rounded-xl p-4 text-center">
+      <div class="bg-red-500/20 border border-red-500/30 rounded-xl p-4 text-center shadow-lg">
         <svg class="w-8 h-8 text-red-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
