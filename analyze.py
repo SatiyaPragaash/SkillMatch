@@ -1,10 +1,16 @@
+from flask import Flask, request, jsonify
 import faiss
 import numpy as np
 import fitz  # PyMuPDF
 import re
+import os
+from flask_cors import CORS
 from sentence_transformers import SentenceTransformer
 
-# ✅ Define whitelist of known technical keywords
+app = Flask(__name__)
+CORS(app)
+
+# ✅ Whitelist of known technical terms
 technical_keywords = {
     'html', 'css', 'sass', 'javascript', 'es6', 'node', 'nodejs', 'express', 'expressjs',
     'react', 'reactjs', 'redux', 'jest', 'thunk', 'mssql', 'mysql', 'mongodb', 'nosql',
@@ -29,70 +35,64 @@ technical_keywords = {
     'vulnerability', 'compliance', 'gdpr', 'iso27001'
 }
 
-# ✅ Clean and tokenize using whitelist
 def clean_and_tokenize(text):
     words = re.findall(r'\b\w+\b', text.lower())
     return set(w for w in words if w in technical_keywords)
 
-# Load job descriptions (for fallback mode)
+# Load models and data
+model = SentenceTransformer('all-MiniLM-L6-v2')
+index = faiss.read_index('faiss_job_index.index')
+job_embeddings = np.load('job_embeddings.npy')
 with open('job_descriptions.txt', 'r') as f:
     job_descriptions = [line.strip() for line in f if line.strip()]
 
-# Load model
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
-# Load FAISS index and embeddings
-index = faiss.read_index('faiss_job_index.index')
-job_embeddings = np.load('job_embeddings.npy')
-
-# Extract text from PDF resume
 def extract_text_from_pdf(pdf_path):
     doc = fitz.open(pdf_path)
-    text = ''
-    for page in doc:
-        text += page.get_text()
+    text = ''.join([page.get_text() for page in doc])
     return text.strip()
 
-# Read and embed resume
-resume_text = extract_text_from_pdf('sample_resume.pdf')
+@app.route('/analyze', methods=['POST'])
+def analyze_resume():
+    if 'resume' not in request.files:
+        return jsonify({"error": "Resume file missing"}), 400
 
-# Prompt user for job description (multi-line)
-print("\n📋 Paste job description (multi-line). Press Enter on a blank line to finish:")
-custom_lines = []
-while True:
-    line = input()
-    if line.strip() == "":
-        break
-    custom_lines.append(line.strip())
+    file = request.files['resume']
+    if not file.filename.endswith('.pdf'):
+        return jsonify({"error": "Only PDF resumes are supported"}), 400
 
-custom_jd = " ".join(custom_lines)
+    temp_path = 'temp_resume.pdf'
+    file.save(temp_path)
+    resume_text = extract_text_from_pdf(temp_path)
+    os.remove(temp_path)
 
-# 🔹 Custom JD path
-if custom_jd:
-    jd_embedding = model.encode([custom_jd])
-    resume_embedding = model.encode([resume_text])
-    matched_description = custom_jd
-    dot = np.dot(resume_embedding, jd_embedding.T)
-    norm = np.linalg.norm(resume_embedding) * np.linalg.norm(jd_embedding)
-    similarity_score = float(dot / norm)
-else:
-    resume_embedding = model.encode([resume_text])
-    D, I = index.search(resume_embedding, k=1)
-    best_match_idx = I[0][0]
-    matched_description = job_descriptions[best_match_idx]
-    similarity_score = 1 / (1 + D[0][0])
+    user_jd = request.form.get('jobdesc', '').strip()
 
-# 🔹 Keyword comparison
-jd_keywords = clean_and_tokenize(matched_description)
-resume_keywords = clean_and_tokenize(resume_text)
-common = jd_keywords & resume_keywords
-missing = jd_keywords - resume_keywords
-keyword_match_percentage = (len(common) / len(jd_keywords)) * 100 if jd_keywords else 0
+    if user_jd:
+        jd_embedding = model.encode([user_jd])
+        resume_embedding = model.encode([resume_text])
+        matched_description = user_jd
+        dot = np.dot(resume_embedding, jd_embedding.T)
+        norm = np.linalg.norm(resume_embedding) * np.linalg.norm(jd_embedding)
+        similarity_score = float(dot / norm)
+    else:
+        resume_embedding = model.encode([resume_text])
+        D, I = index.search(resume_embedding, k=1)
+        best_match_idx = I[0][0]
+        matched_description = job_descriptions[best_match_idx]
+        similarity_score = 1 / (1 + D[0][0])
 
-# 🔹 Final Output
-print("\n📝 Job Description Used:")
-print(matched_description)
-print(f"\n✅ Similarity Score: {similarity_score:.2f}")
-print(f"📊 Keyword Match: {keyword_match_percentage:.2f}%")
-print("\n🔍 Missing technical keywords from resume:")
-print(", ".join(list(missing)[:10]) or "None — Good match!")
+    jd_keywords = clean_and_tokenize(matched_description)
+    resume_keywords = clean_and_tokenize(resume_text)
+    common = jd_keywords & resume_keywords
+    missing = jd_keywords - resume_keywords
+    keyword_match_percentage = (len(common) / len(jd_keywords)) * 100 if jd_keywords else 0
+
+    return jsonify({
+        "job_description_used": matched_description,
+        "similarity_score": float(round(similarity_score, 2)),
+        "keyword_match_percent": float(round(keyword_match_percentage, 2)),
+        "missing_keywords": list(missing)
+    })
+
+if __name__ == '__main__':
+    app.run(debug=True)

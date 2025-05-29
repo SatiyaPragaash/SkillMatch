@@ -1,40 +1,67 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>Resume Analyzer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <h1>Upload Resume</h1>
-  <form id="resumeForm">
-    <input type="file" id="resume" name="resume" accept=".pdf" required />
-    <br><br>
-    <textarea id="jobdesc" rows="6" cols="60" placeholder="Paste job description here (optional)"></textarea>
-    <br><br>
-    <button type="submit">Analyze</button>
-  </form>
-  <pre id="result"></pre>
+<body class="bg-gray-100 text-gray-800 font-sans p-6">
+  <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-8">
+    <h2 class="text-2xl font-bold mb-6 text-center text-blue-700">Resume Analyzer</h2>
+
+    <form id="resumeForm" class="space-y-4">
+      <div>
+        <label class="block font-semibold mb-1">Upload Resume (PDF):</label>
+        <input type="file" name="resume" accept=".pdf" required class="w-full border rounded px-3 py-2">
+      </div>
+
+      <div>
+        <label class="block font-semibold mb-1">Paste Job Description (optional):</label>
+        <textarea name="jobdesc" rows="5" class="w-full border rounded px-3 py-2" placeholder="Enter job description here..."></textarea>
+      </div>
+
+      <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded hover:bg-blue-700">
+        Analyze
+      </button>
+    </form>
+
+    <div class="mt-8">
+      <h3 class="text-lg font-bold mb-2 text-green-700">Results:</h3>
+      <div id="output" class="bg-gray-50 border rounded p-4 whitespace-pre-line text-sm text-gray-700"></div>
+    </div>
+  </div>
 
   <script>
     const form = document.getElementById('resumeForm');
-    const result = document.getElementById('result');
+    const output = document.getElementById('output');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const file = document.getElementById('resume').files[0];
-      const jd = document.getElementById('jobdesc').value;
+      const formData = new FormData(form);
 
-      const formData = new FormData();
-      formData.append('resume', file);
-      formData.append('jobdesc', jd);
+      try {
+        const response = await fetch('http://127.0.0.1:5000/analyze', {
+          method: 'POST',
+          body: formData
+        });
 
-      const res = await fetch('http://localhost:5000/analyze', {
-        method: 'POST',
-        body: formData
-      });
+        const result = await response.json();
+        console.log("✅ JSON received:", result);
 
-      const data = await res.json();
-      result.textContent = JSON.stringify(data, null, 2);
+        output.innerHTML = `
+  <strong>Job Description Used:</strong><br>${result.job_description_used}<br><br>
+  <strong>SkillMatch Score:</strong> ${result.keyword_match_percent}%<br><br>
+  <strong>Missing Keywords:</strong><br>${result.missing_keywords.join(", ") || "None, it's a great match!"}
+        `;
+      } catch (err) {
+        output.textContent = "Error analyzing resume. Please check the backend console.";
+        console.error("JSON parsing failed:", err);
+      }
     });
   </script>
 </body>
 </html>
+
+
+
+<!-- <strong>Similarity Score:</strong> ${result.similarity_score}<br> -->
