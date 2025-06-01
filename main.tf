@@ -123,6 +123,13 @@ resource "aws_security_group" "ec2_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # WARNING: Open to the world
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -136,23 +143,62 @@ resource "aws_security_group" "ec2_sg" {
 # -------------------------------
 resource "aws_instance" "flask_backend" {
   ami                         = "ami-0c101f26f147fa7fd" # Amazon Linux 2023
-  instance_type               = "t3.micro"
+  instance_type               = "t3.medium"
   subnet_id                   = aws_subnet.public_subnet.id
   associate_public_ip_address = true
   vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
   iam_instance_profile        = aws_iam_instance_profile.lab_instance_profile.name
 
-  user_data = <<-EOF
+user_data = <<-EOF
               #!/bin/bash
               yum update -y
               yum install -y unzip python3
               cd /home/ec2-user
-              aws s3 cp s3://${aws_s3_bucket.resume_storage.bucket}/${aws_s3_object.backend_zip.key} backend.zip
-              unzip backend.zip -d backend
+
+              echo "Downloading backend zip..." >> setup.log
+              aws s3 cp s3://${aws_s3_bucket.resume_storage.bucket}/${aws_s3_object.backend_zip.key} backend.zip >> setup.log 2>&1
+              unzip backend.zip -d backend >> setup.log 2>&1
               cd backend
-              pip3 install -r requirements.txt
-              python3 analyze.py
-              EOF
+
+              echo "Upgrading pip..." >> setup.log
+              python3 -m ensurepip --upgrade >> setup.log 2>&1
+              python3 -m pip install --upgrade pip >> setup.log 2>&1
+
+              echo "Installing torch CPU first..." >> setup.log
+              python3 -m pip install torch==2.7.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu >> setup.log 2>&1
+
+              echo "Installing Python dependencies individually..." >> setup.log
+              python3 -m pip install flask >> setup.log 2>&1
+              python3 -m pip install flask-cors >> setup.log 2>&1
+              python3 -m pip install urllib3==2.4.0 >> setup.log 2>&1
+              python3 -m pip install requests==2.32.3 >> setup.log 2>&1
+              python3 -m pip install transformers==4.52.3 >> setup.log 2>&1
+              python3 -m pip install sentence-transformers==4.1.0 >> setup.log 2>&1
+              python3 -m pip install faiss-cpu==1.11.0 >> setup.log 2>&1
+              python3 -m pip install numpy==2.0.2 >> setup.log 2>&1
+              python3 -m pip install scipy==1.13.1 >> setup.log 2>&1
+              python3 -m pip install scikit-learn==1.6.1 >> setup.log 2>&1
+              python3 -m pip install nltk==3.9.1 >> setup.log 2>&1
+              python3 -m pip install PyMuPDF==1.26.0 >> setup.log 2>&1
+              python3 -m pip install typing_extensions==4.13.2 >> setup.log 2>&1
+              python3 -m pip install filelock==3.18.0 >> setup.log 2>&1
+              python3 -m pip install tqdm==4.67.1 >> setup.log 2>&1
+              python3 -m pip install packaging==25.0 >> setup.log 2>&1
+              python3 -m pip install huggingface-hub==0.32.2 >> setup.log 2>&1
+              python3 -m pip install tokenizers==0.21.1 >> setup.log 2>&1
+              python3 -m pip install Jinja2==3.1.6 >> setup.log 2>&1
+              python3 -m pip install Werkzeug==3.1.3 >> setup.log 2>&1
+              python3 -m pip install itsdangerous==2.2.0 >> setup.log 2>&1
+              python3 -m pip install MarkupSafe==3.0.2 >> setup.log 2>&1
+
+              echo "Starting Flask backend..." >> setup.log
+              nohup python3 analyze.py > app.log 2>&1 &
+
+              sleep 15
+              echo "Uploading logs to S3..." >> setup.log
+              aws s3 cp app.log s3://${aws_s3_bucket.resume_storage.bucket}/app.log >> setup.log 2>&1
+              aws s3 cp setup.log s3://${aws_s3_bucket.resume_storage.bucket}/setup.log >> setup.log 2>&1
+EOF
 
   tags = {
     Name = "ResumeAnalyzerEC2"
@@ -186,4 +232,8 @@ output "frontend_s3_url" {
 
 output "ec2_private_ip" {
   value = aws_instance.flask_backend.private_ip
+}
+
+output "ec2_public_ip" {
+  value = aws_instance.flask_backend.public_ip
 }

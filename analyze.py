@@ -72,7 +72,7 @@ def analyze_resume():
     if not file.filename.endswith('.pdf'):
         return jsonify({"error": "Only PDF resumes are supported"}), 400
 
-    temp_path = 'temp_resume.pdf'
+    temp_path = '/tmp/temp_resume.pdf'
     file.save(temp_path)
     resume_text = extract_text_from_pdf(temp_path)
     os.remove(temp_path)
@@ -113,4 +113,4 @@ def analyze_resume():
     })
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
