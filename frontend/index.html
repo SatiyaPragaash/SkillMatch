@@ -208,41 +208,63 @@ elements.form.addEventListener('submit', async (e) => {
     const score = result.keyword_match_percent;
     const scoreColor = score >= 70 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-red-400';
     const missingKeywords = result.missing_keywords?.length > 0 
-      ? result.missing_keywords.map(keyword => `<li class="flex items-center"><span class="w-1.5 h-1.5 bg-orange-400 rounded-full mr-3 flex-shrink-0"></span>${keyword}</li>`).join('') 
-      : '<li class="flex items-center text-green-300"><span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-3 flex-shrink-0"></span>None — excellent match! 🎉</li>';
+    ? result.missing_keywords.map(keyword => `<div class="w-1/2 px-2 mb-2"><li class="flex items-center"><span class="w-1.5 h-1.5 bg-orange-400 rounded-full mr-3 flex-shrink-0"></span>${keyword}</li></div>`)
+      .join('') 
+    : '<li class="flex items-center text-green-300"><span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-3 flex-shrink-0"></span>None — excellent match! 🎉</li>';
+    const missingKeywordsColumns = `<div class="flex flex-wrap -mx-2">${missingKeywords}</div>`;
+
+    const recognizedKeywordsBlock = (result.recognized_keywords || []).map(keyword =>
+    `<div class="w-1/2 px-2 mb-2"><li class="flex items-center"><span class="w-1.5 h-1.5 bg-blue-400 rounded-full mr-3 flex-shrink-0"></span>${keyword}</li></div>`
+    ).join('') || '<li class="text-gray-400">No recognized keywords</li>';
+    const recognizedKeywordsColumns = `<div class="flex flex-wrap -mx-2">${recognizedKeywordsBlock}</div>`;
+
+
 
     elements.output.innerHTML = `
-      <div class="grid gap-4">
+    <div class="grid gap-4">
         <div class="bg-white/5 rounded-xl p-4 border border-white/10 shadow-lg">
-          <h4 class="font-semibold text-indigo-300 mb-2 flex items-center">
+        <h4 class="font-semibold text-indigo-300 mb-2 flex items-center">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>Job Description Used
-          </h4>
-          <p class="text-gray-300 text-sm leading-relaxed">${result.job_description_used}</p>
+        </h4>
+        <p class="text-gray-300 text-sm leading-relaxed">${result.job_description_used}</p>
         </div>
+
         <div class="bg-white/5 rounded-xl p-4 border border-white/10 shadow-lg">
-          <h4 class="font-semibold text-purple-300 mb-3 flex items-center">
+        <h4 class="font-semibold text-purple-300 mb-3 flex items-center">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
             </svg>SkillMatch Score
-          </h4>
-          <div class="flex items-center space-x-4">
+        </h4>
+        <div class="flex items-center space-x-4">
             <div class="flex-1 bg-gray-800 rounded-full h-3 overflow-hidden">
-              <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all duration-1000" style="width: ${score}%"></div>
+            <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all duration-1000" style="width: ${result.keyword_match_percent}%"></div>
             </div>
-            <span class="text-2xl font-bold ${scoreColor}">${score}%</span>
-          </div>
+            <span class="text-2xl font-bold ${scoreColor}">${result.keyword_match_percent}%</span>
         </div>
+        <p class="text-sm text-gray-400 mt-2">Matched ${result.keywords_matched} of ${result.total_keywords} recognized keywords.</p>
+        </div>
+
         <div class="bg-white/5 rounded-xl p-4 border border-white/10 shadow-lg">
-          <h4 class="font-semibold text-orange-300 mb-2 flex items-center">
+        <h4 class="font-semibold text-blue-300 mb-2 flex items-center">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"/>
-            </svg>Missing Keywords
-          </h4>
-          <ul class="text-gray-300 text-sm leading-relaxed space-y-2">${missingKeywords}</ul>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>Recognized Keywords
+        </h4>
+        ${recognizedKeywordsColumns}
         </div>
-      </div>`;
+
+        <div class="bg-white/5 rounded-xl p-4 border border-white/10 shadow-lg">
+        <h4 class="font-semibold text-orange-300 mb-2 flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z"/>
+            </svg>Missing Keywords
+        </h4>
+        ${missingKeywordsColumns}
+        </div>
+    </div>`;
+
 
     setTimeout(() => elements.resultsCard.classList.add('animate-slideUp'), 200);
 

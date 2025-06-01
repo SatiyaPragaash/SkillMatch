@@ -106,7 +106,10 @@ def analyze_resume():
         "job_description_used": matched_description,
         "similarity_score": float(round(similarity_score, 2)),
         "keyword_match_percent": float(round(keyword_match_percentage, 2)),
-        "missing_keywords": display_missing
+        "keywords_matched": len(common),
+        "total_keywords": len(jd_keywords),
+        "recognized_keywords": sorted(list(jd_keywords)),
+        "missing_keywords": sorted(list(missing))
     })
 
 if __name__ == '__main__':
