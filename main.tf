@@ -170,6 +170,7 @@ user_data = <<-EOF
               echo "Installing Python dependencies individually..." >> setup.log
               python3 -m pip install flask >> setup.log 2>&1
               python3 -m pip install flask-cors >> setup.log 2>&1
+              python3 -m pip install boto3 >> setup.log 2>&1
               python3 -m pip install urllib3==2.4.0 >> setup.log 2>&1
               python3 -m pip install requests==2.32.3 >> setup.log 2>&1
               python3 -m pip install transformers==4.52.3 >> setup.log 2>&1
