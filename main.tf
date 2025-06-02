@@ -92,6 +92,18 @@ resource "aws_route_table_association" "b" {
   route_table_id = aws_route_table.public_rt.id
 }
 
+resource "aws_subnet" "private_backend_b" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.5.0/24"
+  availability_zone = "us-east-1b"
+  tags = { Name = "private-backend-subnet-b" }
+}
+
+resource "aws_route_table_association" "backend_assoc_b" {
+  subnet_id      = aws_subnet.private_backend_b.id
+  route_table_id = aws_route_table.private_rt.id
+}
+
 # -------------------------------
 # 2. S3 Buckets
 # -------------------------------
@@ -103,6 +115,31 @@ resource "aws_s3_bucket" "frontend_bucket" {
   bucket        = "resume-analyzer-frontend-${random_id.bucket_id.hex}"
   force_destroy = true
   tags = { Name = "frontend-static" }
+}
+
+resource "aws_s3_bucket_public_access_block" "frontend_bucket_block" {
+  bucket = aws_s3_bucket.frontend_bucket.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_policy" "frontend_public_policy" {
+  bucket = aws_s3_bucket.frontend_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Sid       = "PublicReadGetObject",
+      Effect    = "Allow",
+      Principal = "*",
+      Action    = "s3:GetObject",
+      Resource  = "${aws_s3_bucket.frontend_bucket.arn}/*"
+    }]
+  })
+    depends_on = [aws_s3_bucket_public_access_block.frontend_bucket_block]
 }
 
 resource "aws_s3_bucket_website_configuration" "frontend_website" {
@@ -317,6 +354,12 @@ user_data = <<-EOF
                           "log_group_name": "/ec2/resume-analyzer",
                           "log_stream_name": "{instance_id}",
                           "timestamp_format": "%Y-%m-%d %H:%M:%S"
+                        },
+                        {
+                          "file_path": "/home/ec2-user/setup.log",
+                          "log_group_name": "/ec2/resume-analyzer",
+                          "log_stream_name": "{instance_id}-setup",
+                          "timestamp_format": "%Y-%m-%d %H:%M:%S"
                         }
                       ]
                     }
@@ -335,6 +378,20 @@ EOF
 
   tags = {
     Name = "ResumeAnalyzerEC2"
+  }
+}
+
+resource "aws_instance" "flask_backend_b" {
+  ami                         = "ami-0c101f26f147fa7fd"
+  instance_type               = "t3.medium"
+  subnet_id                   = aws_subnet.private_backend_b.id
+  associate_public_ip_address = false
+  vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
+  iam_instance_profile        = aws_iam_instance_profile.custom_instance_profile.name
+  user_data                   = aws_instance.flask_backend.user_data
+
+  tags = {
+    Name = "ResumeAnalyzerEC2-B"
   }
 }
 
@@ -409,6 +466,12 @@ resource "aws_lb_target_group_attachment" "resume_ec2_attachment" {
   port             = 5000
 }
 
+resource "aws_lb_target_group_attachment" "resume_ec2_attachment_b" {
+  target_group_arn = aws_lb_target_group.resume_target_group.arn
+  target_id        = aws_instance.flask_backend_b.id
+  port             = 5000
+}
+
 # -------------------------------
 # 6. DynamoDB Logging Table
 # -------------------------------
@@ -472,9 +535,66 @@ resource "aws_cloudwatch_metric_alarm" "error_alarm" {
 }
 
 # -------------------------------
+# 9. GuardDuty Threat Detection
+# -------------------------------
+
+resource "aws_guardduty_detector" "main" {
+  enable = true
+}
+
+resource "aws_sns_topic" "guardduty_alerts" {
+  name = "guardduty-alerts-topic"
+}
+
+resource "aws_sns_topic_subscription" "guardduty_email" {
+  topic_arn = aws_sns_topic.guardduty_alerts.arn
+  protocol  = "email"
+  endpoint  = "satiyapragaash23@gmail.com"
+}
+
+resource "aws_cloudwatch_event_rule" "guardduty_findings" {
+  name        = "guardduty-finding-rule"
+  description = "Triggers on new GuardDuty findings"
+  event_pattern = jsonencode({
+    source = ["aws.guardduty"],
+    "detail-type" = ["GuardDuty Finding"]
+  })
+}
+
+resource "aws_cloudwatch_event_target" "guardduty_to_sns" {
+  rule      = aws_cloudwatch_event_rule.guardduty_findings.name
+  target_id = "SendToSNS"
+  arn       = aws_sns_topic.guardduty_alerts.arn
+}
+
+resource "aws_sns_topic_policy" "guardduty_topic_policy" {
+  arn    = aws_sns_topic.guardduty_alerts.arn
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid       = "AllowEventBridgePublish",
+        Effect    = "Allow",
+        Principal = { Service = "events.amazonaws.com" },
+        Action    = "sns:Publish",
+        Resource  = aws_sns_topic.guardduty_alerts.arn
+      }
+    ]
+  })
+}
+
+# -------------------------------
 # 7. Outputs
 # -------------------------------
 
 output "frontend_s3_url" {
   value = "http://${aws_s3_bucket.frontend_bucket.bucket}.s3-website.us-east-1.amazonaws.com"
+}
+
+output "guardduty_detector_id" {
+  value = aws_guardduty_detector.main.id
+}
+
+output "cloudwatch_log_group" {
+  value = aws_cloudwatch_log_group.ec2_log_group.name
 }
