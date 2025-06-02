@@ -138,11 +138,8 @@ resource "aws_security_group" "ec2_sg" {
   }
 }
 
-# -------------------------------
-# 5. EC2 Backend Instance
-# -------------------------------
 resource "aws_instance" "flask_backend" {
-  ami                         = "ami-0c101f26f147fa7fd" # Amazon Linux 2023
+  ami                         = "ami-0c101f26f147fa7fd"
   instance_type               = "t3.medium"
   subnet_id                   = aws_subnet.public_subnet.id
   associate_public_ip_address = true
@@ -152,7 +149,7 @@ resource "aws_instance" "flask_backend" {
 user_data = <<-EOF
               #!/bin/bash
               yum update -y
-              yum install -y unzip python3
+              yum install -y unzip python3 amazon-cloudwatch-agent
               cd /home/ec2-user
 
               echo "Downloading backend zip..." >> setup.log
@@ -199,6 +196,33 @@ user_data = <<-EOF
               echo "Uploading logs to S3..." >> setup.log
               aws s3 cp app.log s3://${aws_s3_bucket.resume_storage.bucket}/app.log >> setup.log 2>&1
               aws s3 cp setup.log s3://${aws_s3_bucket.resume_storage.bucket}/setup.log >> setup.log 2>&1
+
+              # CloudWatch Agent config for app.log
+              cat > /opt/cloudwatch-config.json <<EOL
+              {
+                "logs": {
+                  "logs_collected": {
+                    "files": {
+                      "collect_list": [
+                        {
+                          "file_path": "/home/ec2-user/backend/app.log",
+                          "log_group_name": "/ec2/resume-analyzer",
+                          "log_stream_name": "{instance_id}",
+                          "timestamp_format": "%Y-%m-%d %H:%M:%S"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+              EOL
+
+              echo "Starting CloudWatch Agent..." >> setup.log
+              /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \\
+                -a fetch-config \\
+                -m ec2 \\
+                -c file:/opt/cloudwatch-config.json \\
+                -s >> setup.log 2>&1
 EOF
 
   tags = {
@@ -237,4 +261,56 @@ output "ec2_private_ip" {
 
 output "ec2_public_ip" {
   value = aws_instance.flask_backend.public_ip
+}
+
+# -------------------------------
+# 8. CloudWatch and SNS for Error Alerts
+# -------------------------------
+
+# SNS Topic for alerts
+resource "aws_sns_topic" "error_alerts" {
+  name = "ec2-error-alerts"
+}
+
+# SNS Subscription
+resource "aws_sns_topic_subscription" "email_alert" {
+  topic_arn = aws_sns_topic.error_alerts.arn
+  protocol  = "email"
+  endpoint  = "satiyapragaash23@gmail.com"
+}
+
+# Metric Filter to catch "ERROR" in logs
+resource "aws_cloudwatch_log_metric_filter" "error_filter" {
+  name           = "ErrorFilter"
+  log_group_name = aws_cloudwatch_log_group.ec2_log_group.name
+  pattern        = "ERROR"
+
+  metric_transformation {
+    name      = "EC2ErrorCount"
+    namespace = "ResumeAnalyzer"
+    value     = "1"
+  }
+}
+
+# Alarm to notify when error count > 0
+resource "aws_cloudwatch_metric_alarm" "error_alarm" {
+  alarm_name          = "ResumeAnalyzerErrorAlarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = 1
+  metric_name         = "EC2ErrorCount"
+  namespace           = "ResumeAnalyzer"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 1
+  alarm_description   = "Triggers when EC2 app.log reports errors"
+  alarm_actions       = [aws_sns_topic.error_alerts.arn]
+}
+
+resource "aws_cloudwatch_log_group" "ec2_log_group" {
+  name              = "/ec2/resume-analyzer"
+  retention_in_days = 7
+
+  tags = {
+    Name = "ResumeAnalyzerEC2Logs"
+  }
 }
