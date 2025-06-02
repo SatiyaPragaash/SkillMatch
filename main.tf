@@ -20,6 +20,14 @@ resource "aws_subnet" "public_subnet" {
   tags = { Name = "public-subnet" }
 }
 
+resource "aws_subnet" "public_subnet_b" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.4.0/24"
+  map_public_ip_on_launch = true
+  availability_zone       = "us-east-1b"
+  tags = { Name = "public-subnet-b" }
+}
+
 resource "aws_subnet" "private_backend" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.2.0/24"
@@ -39,6 +47,32 @@ resource "aws_internet_gateway" "gw" {
   tags = { Name = "resume-igw" }
 }
 
+resource "aws_eip" "nat_eip" {
+  domain = "vpc"
+}
+
+resource "aws_nat_gateway" "nat_gw" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public_subnet.id
+  tags = { Name = "resume-nat-gw" }
+}
+
+resource "aws_route_table" "private_rt" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat_gw.id
+  }
+
+  tags = { Name = "private-rt" }
+}
+
+resource "aws_route_table_association" "backend_assoc" {
+  subnet_id      = aws_subnet.private_backend.id
+  route_table_id = aws_route_table.private_rt.id
+}
+
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
   route {
@@ -53,6 +87,11 @@ resource "aws_route_table_association" "a" {
   route_table_id = aws_route_table.public_rt.id
 }
 
+resource "aws_route_table_association" "b" {
+  subnet_id      = aws_subnet.public_subnet_b.id
+  route_table_id = aws_route_table.public_rt.id
+}
+
 # -------------------------------
 # 2. S3 Buckets
 # -------------------------------
@@ -60,34 +99,24 @@ resource "random_id" "bucket_id" {
   byte_length = 4
 }
 
-# Frontend S3 Bucket
 resource "aws_s3_bucket" "frontend_bucket" {
   bucket        = "resume-analyzer-frontend-${random_id.bucket_id.hex}"
   force_destroy = true
   tags = { Name = "frontend-static" }
 }
 
-# Configure S3 Website Hosting
 resource "aws_s3_bucket_website_configuration" "frontend_website" {
   bucket = aws_s3_bucket.frontend_bucket.bucket
-
-  index_document {
-    suffix = "index.html"
-  }
-
-  error_document {
-    key = "error.html"
-  }
+  index_document { suffix = "index.html" }
+  error_document { key = "error.html" }
 }
 
-# Backend Resume Storage Bucket
 resource "aws_s3_bucket" "resume_storage" {
   bucket        = "resume-analyzer-resumes-${random_id.bucket_id.hex}"
   force_destroy = true
   tags = { Name = "resume-storage" }
 }
 
-# Upload backend zip to S3
 resource "aws_s3_object" "backend_zip" {
   bucket = aws_s3_bucket.resume_storage.id
   key    = "resume-backend.zip"
@@ -95,21 +124,99 @@ resource "aws_s3_object" "backend_zip" {
   etag   = filemd5("./resume-backend.zip")
 }
 
-# -------------------------------
-# 3. IAM Instance Profile (LabRole)
-# -------------------------------
-data "aws_iam_role" "labrole" {
-  name = "LabRole"
+resource "aws_s3_object" "frontend_index" {
+  bucket        = aws_s3_bucket.frontend_bucket.bucket
+  key           = "index.html"
+  source        = "${path.module}/index.html"
+  content_type  = "text/html"
+  cache_control = "no-cache"
 }
 
-resource "aws_iam_instance_profile" "lab_instance_profile" {
-  name = "lab-instance-profile"
-  role = data.aws_iam_role.labrole.name
+resource "local_file" "config_json" {
+  filename = "${path.module}/config.json"
+  content  = jsonencode({
+    API_BASE_URL = "http://${aws_lb.resume_alb.dns_name}"
+  })
 }
 
+resource "aws_s3_object" "frontend_config" {
+  bucket        = aws_s3_bucket.frontend_bucket.bucket
+  key           = "config.json"
+  source        = local_file.config_json.filename
+  content_type  = "application/json"
+  cache_control = "no-cache"
+}
 
 # -------------------------------
-# 4. EC2 Security Group
+# 3. IAM Role and Policy for EC2
+# -------------------------------
+resource "aws_iam_role" "ec2_backend_role" {
+  name = "resume-analyzer-ec2-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      },
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "ec2_backend_policy" {
+  name = "resume-analyzer-policy"
+  role = aws_iam_role.ec2_backend_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket"
+        ],
+        Resource = [
+          "${aws_s3_bucket.resume_storage.arn}",
+          "${aws_s3_bucket.resume_storage.arn}/*"
+        ]
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "cloudwatch:PutMetricData"
+        ],
+        Resource = "*"
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "dynamodb:PutItem"
+        ],
+        Resource = "${aws_dynamodb_table.logs.arn}"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "custom_instance_profile" {
+  name = "resume-analyzer-instance-profile"
+  role = aws_iam_role.ec2_backend_role.name
+}
+
+# -------------------------------
+# 4. EC2 Security Group and Instance
 # -------------------------------
 resource "aws_security_group" "ec2_sg" {
   name        = "resume-analyzer-sg"
@@ -117,17 +224,18 @@ resource "aws_security_group" "ec2_sg" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    from_port   = 5000
-    to_port     = 5000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 5000
+    to_port         = 5000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb_sg.id]
   }
 
+  # SSH rule (optional)
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # WARNING: Open to the world
+    cidr_blocks = ["0.0.0.0/0"] 
   }
 
   egress {
@@ -141,10 +249,10 @@ resource "aws_security_group" "ec2_sg" {
 resource "aws_instance" "flask_backend" {
   ami                         = "ami-0c101f26f147fa7fd"
   instance_type               = "t3.medium"
-  subnet_id                   = aws_subnet.public_subnet.id
-  associate_public_ip_address = true
+  subnet_id = aws_subnet.private_backend.id
+  associate_public_ip_address = false
   vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
-  iam_instance_profile        = aws_iam_instance_profile.lab_instance_profile.name
+  iam_instance_profile        = aws_iam_instance_profile.custom_instance_profile.name
 
 user_data = <<-EOF
               #!/bin/bash
@@ -231,6 +339,77 @@ EOF
 }
 
 # -------------------------------
+# 6. Load Balancer
+# -------------------------------
+
+resource "aws_security_group" "alb_sg" {
+  name        = "resume-alb-sg"
+  description = "Allow HTTP from anywhere"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_lb" "resume_alb" {
+  name               = "resume-analyzer-alb"
+  internal           = false
+  load_balancer_type = "application"
+  subnets            = [
+    aws_subnet.public_subnet.id,
+    aws_subnet.public_subnet_b.id
+  ]
+  security_groups    = [aws_security_group.alb_sg.id]
+  tags = { Name = "resume-alb" }
+}
+
+resource "aws_lb_target_group" "resume_target_group" {
+  name     = "resume-target-group"
+  port     = 5000
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.main.id
+
+  health_check {
+    path                = "/"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    matcher             = "200-399"
+  }
+
+  tags = { Name = "resume-tg" }
+}
+
+resource "aws_lb_listener" "resume_listener" {
+  load_balancer_arn = aws_lb.resume_alb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.resume_target_group.arn
+  }
+}
+
+resource "aws_lb_target_group_attachment" "resume_ec2_attachment" {
+  target_group_arn = aws_lb_target_group.resume_target_group.arn
+  target_id        = aws_instance.flask_backend.id
+  port             = 5000
+}
+
+# -------------------------------
 # 6. DynamoDB Logging Table
 # -------------------------------
 resource "aws_dynamodb_table" "logs" {
@@ -249,37 +428,24 @@ resource "aws_dynamodb_table" "logs" {
 }
 
 # -------------------------------
-# 7. Outputs
-# -------------------------------
-output "frontend_s3_url" {
-  value = "http://${aws_s3_bucket.frontend_bucket.bucket}.s3-website.us-east-1.amazonaws.com"
-}
-
-output "ec2_private_ip" {
-  value = aws_instance.flask_backend.private_ip
-}
-
-output "ec2_public_ip" {
-  value = aws_instance.flask_backend.public_ip
-}
-
-# -------------------------------
 # 8. CloudWatch and SNS for Error Alerts
 # -------------------------------
-
-# SNS Topic for alerts
 resource "aws_sns_topic" "error_alerts" {
   name = "ec2-error-alerts"
 }
 
-# SNS Subscription
 resource "aws_sns_topic_subscription" "email_alert" {
   topic_arn = aws_sns_topic.error_alerts.arn
   protocol  = "email"
   endpoint  = "satiyapragaash23@gmail.com"
 }
 
-# Metric Filter to catch "ERROR" in logs
+resource "aws_cloudwatch_log_group" "ec2_log_group" {
+  name              = "/ec2/resume-analyzer"
+  retention_in_days = 7
+  tags = { Name = "ResumeAnalyzerEC2Logs" }
+}
+
 resource "aws_cloudwatch_log_metric_filter" "error_filter" {
   name           = "ErrorFilter"
   log_group_name = aws_cloudwatch_log_group.ec2_log_group.name
@@ -292,7 +458,6 @@ resource "aws_cloudwatch_log_metric_filter" "error_filter" {
   }
 }
 
-# Alarm to notify when error count > 0
 resource "aws_cloudwatch_metric_alarm" "error_alarm" {
   alarm_name          = "ResumeAnalyzerErrorAlarm"
   comparison_operator = "GreaterThanOrEqualToThreshold"
@@ -306,11 +471,10 @@ resource "aws_cloudwatch_metric_alarm" "error_alarm" {
   alarm_actions       = [aws_sns_topic.error_alerts.arn]
 }
 
-resource "aws_cloudwatch_log_group" "ec2_log_group" {
-  name              = "/ec2/resume-analyzer"
-  retention_in_days = 7
+# -------------------------------
+# 7. Outputs
+# -------------------------------
 
-  tags = {
-    Name = "ResumeAnalyzerEC2Logs"
-  }
+output "frontend_s3_url" {
+  value = "http://${aws_s3_bucket.frontend_bucket.bucket}.s3-website.us-east-1.amazonaws.com"
 }

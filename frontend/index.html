@@ -181,19 +181,22 @@ function shrinkForm() {
   document.querySelectorAll('#fileLabel svg, #jobLabel svg').forEach(svg => svg.className = 'w-4 h-4 mr-2 text-indigo-400');
 }
 
-elements.form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const formData = new FormData(elements.form);
 
-  elements.loadingOverlay.style.display = 'flex';
-  elements.loadingOverlay.classList.add('animate-fadeIn');
+fetch('config.json')
+  .then(res => res.json())
+  .then(config => {
+    elements.form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(elements.form);
+      elements.loadingOverlay.style.display = 'flex';
+      elements.loadingOverlay.classList.add('animate-fadeIn');
 
-  try {
-    const response = await fetch('http://44.203.173.252:5000/analyze', {
-      method: 'POST',
-      body: formData
-    });
-    const result = await response.json();
+      try {
+        const response = await fetch(`${config.API_BASE_URL}/analyze`, {
+          method: 'POST',
+          body: formData
+        });
+        const result = await response.json();
 
     elements.loadingOverlay.style.display = 'none';
     
@@ -288,6 +291,7 @@ elements.form.addEventListener('submit', async (e) => {
     setTimeout(() => elements.resultsCard.classList.add('animate-slideUp'), 200);
     console.error("Analysis failed:", err);
   }
+});
 });
 </script>
 </body>
