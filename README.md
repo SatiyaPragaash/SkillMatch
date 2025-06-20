@@ -15,18 +15,50 @@ An AI-powered resume analysis and skill-matching service. Upload a PDF resume an
 - Sends SNS email alerts for “ERROR” entries in logs
 
 ---
-
 ## Tech Stack
 
 - **Backend**: Python 3, Flask, Sentence Transformers, FAISS, PyMuPDF
-- **Frontend**: React (served from S3 static website)
-- **Infrastructure**: AWS EC2, S3, DynamoDB, SNS, CloudWatch (via Terraform)
+- **Frontend**: React (built output only, uploaded to S3)
+- **Cloud Infra**: AWS EC2, S3, DynamoDB, SNS, CloudWatch, IAM
+- **IaC**: Terraform
 
 ---
 
-## Quick Start
+## Deployment Guide
 
-1. **Clone the repo**
-   ```bash
-   git clone <your-repo-url>
-   cd resume-analyzer
+### 1. Prepare Your Files
+Upload the following manually to your AWS CloudShell:
+- `main.tf` – your Terraform configuration file
+- `resume-backend.zip` – zipped Flask backend folder
+- `index.html` or frontend files – static output of your React app
+
+### 2. Initialize and Deploy
+```bash
+terraform init
+terraform apply
+```
+## 🌐 Access the Application
+
+- **Frontend URL**: Printed as `frontend_s3_url` in Terraform output  
+- **Backend IP**: `ec2_public_ip` in Terraform output (Flask app runs on port `5000`)
+
+---
+
+## 🧾 API Endpoint
+
+### `POST /analyze`  
+Runs on the EC2 instance's public IP at port `5000`.
+
+**Form Data:**
+- `resume`: PDF file *(required)*
+- `jobdesc`: Optional plain-text job description
+
+**Sample Response:**
+```json
+{
+  "similarity_score": 0.87,
+  "keyword_match_percent": 76.9,
+  "keywords_matched": 10,
+  "missing_keywords": ["terraform", "aws", "docker"]
+}
+```
