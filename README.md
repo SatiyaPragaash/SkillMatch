@@ -26,25 +26,29 @@ An AI-powered resume analysis and skill-matching service. Upload a PDF resume an
 
 ## Deployment Guide
 
-### 1. Prepare Your Files
+### 1. **Clone the repo**
+### 2. Edit for SNS alerts.
+In line 552 of main.tf file edit the
+### 3. Prepare Your Files
 Upload the following manually to your AWS CloudShell:
 - `main.tf` – your Terraform configuration file
 - `resume-backend.zip` – zipped Flask backend folder
 - `index.html` or frontend files – static output of your React app
 
-### 2. Initialize and Deploy
+### 4. Initialize and Deploy
 ```bash
 terraform init
 terraform apply
 ```
-## 🌐 Access the Application
+## 5. Access the Application
 
 - **Frontend URL**: Printed as `frontend_s3_url` in Terraform output  
 - **Backend IP**: `ec2_public_ip` in Terraform output (Flask app runs on port `5000`)
+- Copy the frontend url and paste it in your browser.
 
 ---
 
-## 🧾 API Endpoint
+## API Endpoint
 
 ### `POST /analyze`  
 Runs on the EC2 instance's public IP at port `5000`.
@@ -62,62 +66,54 @@ Runs on the EC2 instance's public IP at port `5000`.
   "missing_keywords": ["terraform", "aws", "docker"]
 }
 ```
-📈 Monitoring & Alerts
-    
-  -CloudWatch Logs collect output from app.log
-  -Metric filter detects "ERROR" entries
-  -SNS topic sends email alerts to: satiyapragaash23@gmail.com
+## Monitoring & Alerts
 
-🔐 Security & Permissions
+- CloudWatch Logs collect output from `app.log`  
+- Metric filter detects `"ERROR"` entries  
+- SNS topic sends email alerts to your mail id  
 
-    IAM Role: EC2 instance uses LabRole with access to S3, DynamoDB, and CloudWatch
+---
 
-    Security Group: Only ports 22 (SSH) and 5000 (Flask) are open
+## Security & Permissions
 
-📊 Terraform Outputs
+- **IAM Role**: EC2 instance uses **LabRole** with access to S3, DynamoDB, and CloudWatch  
+- **Security Group**: Only ports **22** (SSH) and **5000** (Flask) are open  
 
-After running terraform apply, you'll get:
+---
 
-    ✅ frontend_s3_url – URL to access the frontend UI
+## Terraform Outputs
 
-    ✅ ec2_public_ip – IP for backend testing or debugging
+After running `terraform apply`, you'll get:
 
-    ✅ DynamoDB table name – stores resume analysis logs
+- `frontend_s3_url` – URL to access the frontend UI  
+- `ec2_public_ip` – IP for backend testing or debugging  
+- `DynamoDB table name` – stores resume analysis logs  
 
-🧪 Testing Tips
+---
 
-    Upload only a resume
+## Testing Tips
 
-    Upload resume + job description (paste as plain text)
+- Upload **only a resume**  
+- Upload **resume + job description** (paste as plain text)  
+- View:
+  - Similarity score  
+  - Missing keywords  
+- Check logs in **DynamoDB** and **CloudWatch**
 
-    View:
+---
 
-        Similarity score
+## Cost Optimization
 
-        Missing keywords
+- EC2 instance type: `t3.medium` (cost-efficient backend)  
+- S3 buckets: `force_destroy = true` for cleanup  
+- Log retention: **7 days**  
+- DynamoDB billing: `PAY_PER_REQUEST` (no over-provisioning)  
 
-    Check logs in DynamoDB and CloudWatch
+---
 
-📉 Cost Optimization
+## References
 
-    EC2 instance type: t3.medium (cost-efficient backend)
-
-    S3 buckets: force_destroy = true for cleanup
-
-    Log retention: 7 days
-
-    DynamoDB billing: PAY_PER_REQUEST (no over-provisioning)
-
-📚 References
-
-    Sentence Transformers
-
-    FAISS by Facebook
-
-    AWS CloudWatch Agent
-
-    Terraform AWS Provider
-
-🙌 Acknowledgements
-
-Built as part of the CSCI 5411 Cloud Computing course at Dalhousie University.
+- [Sentence Transformers](https://www.sbert.net/)  
+- [FAISS by Facebook](https://github.com/facebookresearch/faiss)  
+- [AWS CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html)  
+- [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
