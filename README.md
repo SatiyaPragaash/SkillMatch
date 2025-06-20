@@ -40,7 +40,7 @@ Upload the following manually to your AWS CloudShell:
 terraform init
 terraform apply
 ```
-## 5. Access the Application
+### 5. Access the Application
 
 - **Frontend URL**: Shown as `frontend_s3_url` in Terraform output  
 - **Backend**: Two EC2 instances behind an ALB (port 80), each running Flask on port `5000`
