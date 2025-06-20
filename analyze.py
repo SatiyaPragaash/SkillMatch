@@ -59,6 +59,10 @@ def extract_text_from_pdf(pdf_path):
     doc = fitz.open(pdf_path)
     return ''.join([page.get_text() for page in doc]).strip()
 
+@app.route('/', methods=['GET'])
+def health_check():
+    return 'OK', 200
+    
 @app.route('/analyze', methods=['POST'])
 def analyze_resume():
     if 'resume' not in request.files:
