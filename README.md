@@ -1,18 +1,18 @@
 # Resume Analyzer & Skill Matcher
 
-An AI-powered resume analysis and skill-matching service. Upload a PDF resume and compare it against job descriptions to get keyword matches, similarity scores, and missing skills. Built on AWS using Terraform with a scalable, serverless-friendly architecture.
+An AI-powered resume analysis and skill-matching service. Upload a PDF resume and compare it against job descriptions to get keyword matches, similarity scores, and missing skills. Built entirely on AWS using Terraform with a modular, scalable architecture and real-time analysis powered by MiniLM embeddings and FAISS.
 
 ---
 
 ## Features
 
-- Upload PDF resumes for automatic parsing
-- Match resumes against job descriptions using MiniLM + FAISS embeddings
+- Upload PDF resumes for semantic analysis
+- Match resumes to predefined job descriptions using MiniLM + FAISS
 - Calculates similarity score and keyword match percentage
-- Highlights missing keywords
-- Logs metadata to DynamoDB
-- Monitors errors in CloudWatch Logs
-- Sends SNS email alerts for “ERROR” entries in logs
+- Highlights missing keywords for improvement
+- Logs analysis metadata to DynamoDB
+- CloudWatch monitoring with SNS email alerts for “ERROR” events
+- All infrastructure provisioned via Terraform
 
 ---
 ## Tech Stack
@@ -66,7 +66,7 @@ terraform apply
   "missing_keywords": ["terraform", "aws", "docker"]
 }
 ```
-## 📈 Monitoring & Alerts
+## Monitoring & Alerts
 
 - **Logs**: Captured via `app.log` and `setup.log`, pushed to CloudWatch
 - **Metric Filter**: Triggers if any `"ERROR"` appears in logs
@@ -75,7 +75,7 @@ terraform apply
 
 ---
 
-## 🔐 Security & Permissions
+## Security & Permissions
 
 - **IAM Role**: EC2 instances assume a custom role with scoped access to S3, DynamoDB, and CloudWatch
 - **Private Subnets**: EC2s are deployed in private subnets with no public IPs
@@ -86,29 +86,17 @@ terraform apply
 
 ---
 
-## 📊 Terraform Outputs
+## Terraform Outputs
 
 After successful deployment, you will see:
 
-- ✅ `frontend_s3_url` – for accessing the app UI  
-- ✅ `ec2_public_ip` (ALB DNS Name) – for backend API testing/debugging  
-- ✅ DynamoDB table name – where analysis logs are stored
+- `frontend_s3_url` – for accessing the app UI  
+- `ec2_public_ip` (ALB DNS Name) – for backend API testing/debugging  
+- DynamoDB table name – where analysis logs are stored
 
 ---
 
-## 🧪 Testing Tips
-
-- ✅ Upload a **resume only**  
-- ✅ Upload a **resume + job description**
-- ✅ Confirm that:
-  - Similarity score is returned
-  - Missing keywords are shown
-  - DynamoDB and CloudWatch log your interaction
-  - SNS email is triggered on errors
-
----
-
-## 💰 Cost Optimization
+## Cost Optimization
 
 - EC2: Two `t3.medium` instances (balanced cost and compute)
 - ALB: Single ALB in front of EC2s
