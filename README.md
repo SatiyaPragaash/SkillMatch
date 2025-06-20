@@ -62,3 +62,64 @@ Runs on the EC2 instance's public IP at port `5000`.
   "missing_keywords": ["terraform", "aws", "docker"]
 }
 ```
+📈 Monitoring & Alerts
+
+    CloudWatch Logs collect output from app.log
+
+    Metric filter detects "ERROR" entries
+
+    SNS topic sends email alerts to: satiyapragaash23@gmail.com
+
+🔐 Security & Permissions
+
+    IAM Role: EC2 instance uses LabRole with access to S3, DynamoDB, and CloudWatch
+
+    Security Group: Only ports 22 (SSH) and 5000 (Flask) are open
+
+📊 Terraform Outputs
+
+After running terraform apply, you'll get:
+
+    ✅ frontend_s3_url – URL to access the frontend UI
+
+    ✅ ec2_public_ip – IP for backend testing or debugging
+
+    ✅ DynamoDB table name – stores resume analysis logs
+
+🧪 Testing Tips
+
+    Upload only a resume
+
+    Upload resume + job description (paste as plain text)
+
+    View:
+
+        Similarity score
+
+        Missing keywords
+
+    Check logs in DynamoDB and CloudWatch
+
+📉 Cost Optimization
+
+    EC2 instance type: t3.medium (cost-efficient backend)
+
+    S3 buckets: force_destroy = true for cleanup
+
+    Log retention: 7 days
+
+    DynamoDB billing: PAY_PER_REQUEST (no over-provisioning)
+
+📚 References
+
+    Sentence Transformers
+
+    FAISS by Facebook
+
+    AWS CloudWatch Agent
+
+    Terraform AWS Provider
+
+🙌 Acknowledgements
+
+Built as part of the CSCI 5411 Cloud Computing course at Dalhousie University.
