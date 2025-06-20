@@ -63,12 +63,10 @@ Runs on the EC2 instance's public IP at port `5000`.
 }
 ```
 📈 Monitoring & Alerts
-
-    CloudWatch Logs collect output from app.log
-
-    Metric filter detects "ERROR" entries
-
-    SNS topic sends email alerts to: satiyapragaash23@gmail.com
+    
+  -CloudWatch Logs collect output from app.log
+  -Metric filter detects "ERROR" entries
+  -SNS topic sends email alerts to: satiyapragaash23@gmail.com
 
 🔐 Security & Permissions
 
