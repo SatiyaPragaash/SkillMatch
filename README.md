@@ -28,7 +28,7 @@ An AI-powered resume analysis and skill-matching service. Upload a PDF resume an
 
 ### 1. **Clone the repo**
 ### 2. Edit for SNS alerts.
-In line 552 of main.tf file edit the
+- In line 552 of main.tf file replace your mail id in the placeholder.
 ### 3. Prepare Your Files
 Upload the following manually to your AWS CloudShell:
 - `main.tf` – your Terraform configuration file
